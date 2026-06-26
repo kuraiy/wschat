@@ -1,0 +1,35 @@
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Тестовые артефакты
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Go-специфичное
+/vendor/
+go.work
+go.work.sum
+
+# IDE / редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS-специфичное
+.DS_Store
+Thumbs.db
+
+# Переменные окружения / секреты
+.env
+.env.local
+*.local
+
+# Логи
+*.log
