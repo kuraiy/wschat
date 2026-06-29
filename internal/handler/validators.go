@@ -9,8 +9,8 @@ import (
 
 func RegisterValidators() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("password", validatePassword)
-		v.RegisterValidation("username", validateUsername)
+		_ = v.RegisterValidation("password", validatePassword)
+		_ = v.RegisterValidation("username", validateUsername)
 	}
 }
 
