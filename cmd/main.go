@@ -41,6 +41,7 @@ func main() {
 
 	router := gin.Default()
 
+	handler.RegisterValidators()
 	uh.AuthRoutes(router)
 
 	// go func() {
