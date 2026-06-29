@@ -19,7 +19,6 @@ func New(s domain.UserService) *AuthHandler {
 
 func (h *AuthHandler) AuthRoutes(g *gin.Engine) {
 	g.POST("/register", h.Register)
-	g.POST("/login", h.Login)
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -32,7 +31,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	res, err := h.svc.CreateUser(c.Request.Context(), json.Username, json.Password)
+	err := h.svc.CreateUser(c.Request.Context(), json.Username, json.Password)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -40,9 +39,5 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, res)
-}
-
-func (h *AuthHandler) Login(c *gin.Context) {
-
+	c.Status(http.StatusOK)
 }
