@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	database "wschat/gen"
-	"wschat/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -18,18 +17,15 @@ func New(db *pgxpool.Pool) *AuthRepository {
 	}
 }
 
-func (r *AuthRepository) CreateUser(ctx context.Context, username string, password string) (domain.User, error) {
-	res, err := r.queries.CreateUser(ctx, database.CreateUserParams{
+func (r *AuthRepository) CreateUser(ctx context.Context, username string, password string) error {
+	_, err := r.queries.CreateUser(ctx, database.CreateUserParams{
 		Username:     username,
 		PasswordHash: password,
 	})
 
 	if err != nil {
-		return domain.User{}, err
+		return err
 	}
 
-	return domain.User{
-		ID:       res.ID,
-		Username: res.Username,
-	}, nil
+	return nil
 }
