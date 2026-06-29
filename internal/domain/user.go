@@ -8,17 +8,10 @@ type User struct {
 	PasswordHash string
 }
 
-type AuthOutput struct {
-	ID           int64
-	Username     string
-	AccessToken  string
-	RefreshToken string
-}
-
 type UserRepository interface {
-	CreateUser(ctx context.Context, username string, password string) (User, error)
+	CreateUser(ctx context.Context, username string, password string) error
 }
 
 type UserService interface {
-	CreateUser(ctx context.Context, username string, password string) (AuthOutput, error)
+	CreateUser(ctx context.Context, username string, password string) error
 }
