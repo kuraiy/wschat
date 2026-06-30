@@ -8,5 +8,5 @@ RETURNING id, username;
 
 -- name: GetUser :one
 SELECT id, username, password_hash FROM users
-WHERE id = $1
+WHERE username = $1
 LIMIT 1;
