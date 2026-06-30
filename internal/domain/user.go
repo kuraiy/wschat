@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"wschat/internal/dto"
+)
 
 type User struct {
 	ID           int64
@@ -10,8 +13,10 @@ type User struct {
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, username string, password string) error
+	GetUserByUsername(ctx context.Context, username string) (User, error)
 }
 
 type UserService interface {
-	CreateUser(ctx context.Context, username string, password string) error
+	SignUp(ctx context.Context, username string, password string) error
+	SignIn(ctx context.Context, username string, password string) (dto.LoginOutput, error)
 }
