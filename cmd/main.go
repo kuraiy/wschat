@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"wschat/internal/handler"
 	"wschat/internal/repository"
+	"wschat/internal/router"
 	"wschat/internal/service"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -32,25 +32,24 @@ func main() {
 	}
 
 	defer pool.Close()
-	secret := os.Getenv("SECRET")
-	exp, _ := strconv.Atoi(os.Getenv("exp"))
+	accessExp, _ := strconv.Atoi(os.Getenv("EXP"))
+	refreshExp, _ := strconv.Atoi(os.Getenv("REFRESH_EXP"))
+
+	tokenData := service.TokenInfo{
+		Access:     os.Getenv("SECRET"),
+		AccessExp:  accessExp,
+		Refresh:    os.Getenv("REFRESH"),
+		RefreshExp: refreshExp,
+	}
 
 	ur := repository.New(pool)
-	us := service.New(ur, secret, exp)
-	uh := handler.New(us)
+	us := service.New(ur, tokenData)
+	uh := handler.NewAuth(us)
+	mh := handler.NewMe(us)
 
-	router := gin.Default()
+	rtr := router.New(uh, mh)
 
-	handler.RegisterValidators()
-	uh.AuthRoutes(router)
-
-	// go func() {
-	// 	if err := router.Run(os.Getenv("APP_PORT")); err != nil {
-	// 		log.Fatal("Server didn't start")
-	// 	}
-	// }()
-
-	if err := router.Run(os.Getenv("APP_PORT")); err != nil {
+	if err := rtr.Run(os.Getenv("APP_PORT")); err != nil {
 		log.Fatal("Server didn't start")
 	}
 
