@@ -67,6 +67,10 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 	}, nil
 }
 
+func (s *AuthService) SignOut(ctx context.Context, refresh string) {
+	s.tm.Redis.DeleteToken(refresh)
+}
+
 func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
 	accessToken, err := s.tm.GenerateAccess(id)
 
