@@ -10,7 +10,7 @@ import (
 	"wschat/internal/repository"
 	"wschat/internal/router"
 	"wschat/internal/service"
-	"wschat/internal/token"
+	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -38,7 +38,7 @@ func main() {
 	accessSecret := os.Getenv("ACCESS")
 	refreshSecret := os.Getenv("REFRESH")
 
-	tm := token.NewManager(accessSecret, refreshSecret, accessExp, refreshExp)
+	tm := auth_token.NewManager(accessSecret, refreshSecret, accessExp, refreshExp)
 
 	ur := repository.New(pool)
 	us := service.New(ur, tm)

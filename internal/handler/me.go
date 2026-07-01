@@ -4,17 +4,17 @@ import (
 	"net/http"
 	"wschat/internal/domain"
 	"wschat/internal/middleware"
-	"wschat/internal/token"
+	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
 )
 
 type MeHandler struct {
 	svc domain.UserService
-	tm  *token.TokenManager
+	tm  *auth_token.TokenManager
 }
 
-func NewMe(s domain.UserService, manager *token.TokenManager) *MeHandler {
+func NewMe(s domain.UserService, manager *auth_token.TokenManager) *MeHandler {
 	return &MeHandler{
 		svc: s,
 		tm:  manager,

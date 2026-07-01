@@ -4,13 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"time"
-	"wschat/internal/token"
+	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func AuthMiddleware(tm *token.TokenManager) gin.HandlerFunc {
+func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr, err := c.Cookie("access_token")
 

@@ -1,4 +1,4 @@
-package token
+package auth_token
 
 import (
 	"errors"

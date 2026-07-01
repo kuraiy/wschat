@@ -5,17 +5,17 @@ import (
 	"errors"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
-	"wschat/internal/token"
+	auth_token "wschat/internal/service/auth_token"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	repo domain.UserRepository
-	tm   *token.TokenManager
+	tm   *auth_token.TokenManager
 }
 
-func New(repo domain.UserRepository, tm *token.TokenManager) *AuthService {
+func New(repo domain.UserRepository, tm *auth_token.TokenManager) *AuthService {
 	return &AuthService{
 		repo: repo,
 		tm:   tm,
