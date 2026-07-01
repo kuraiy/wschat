@@ -10,6 +10,7 @@ import (
 	"wschat/internal/repository"
 	"wschat/internal/router"
 	"wschat/internal/service"
+	"wschat/internal/token"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -32,20 +33,17 @@ func main() {
 	}
 
 	defer pool.Close()
-	accessExp, _ := strconv.Atoi(os.Getenv("EXP"))
+	accessExp, _ := strconv.Atoi(os.Getenv("ACCESS_EXP"))
 	refreshExp, _ := strconv.Atoi(os.Getenv("REFRESH_EXP"))
+	accessSecret := os.Getenv("ACCESS")
+	refreshSecret := os.Getenv("REFRESH")
 
-	tokenData := service.TokenInfo{
-		Access:     os.Getenv("SECRET"),
-		AccessExp:  accessExp,
-		Refresh:    os.Getenv("REFRESH"),
-		RefreshExp: refreshExp,
-	}
+	tm := token.NewManager(accessSecret, refreshSecret, accessExp, refreshExp)
 
 	ur := repository.New(pool)
-	us := service.New(ur, tokenData)
+	us := service.New(ur, tm)
 	uh := handler.NewAuth(us)
-	mh := handler.NewMe(us)
+	mh := handler.NewMe(us, tm)
 
 	rtr := router.New(uh, mh)
 
