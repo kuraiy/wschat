@@ -5,23 +5,28 @@ import (
 	"time"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
+	"wschat/internal/middleware"
+	"wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
 	svc domain.UserService
+	tm  *auth_token.TokenManager
 }
 
-func NewAuth(s domain.UserService) *AuthHandler {
+func NewAuth(s domain.UserService, tm *auth_token.TokenManager) *AuthHandler {
 	return &AuthHandler{
 		svc: s,
+		tm:  tm,
 	}
 }
 
 func (h *AuthHandler) AuthRoutes(g *gin.Engine) {
 	g.POST("/sign-up", h.SignUp)
 	g.POST("/sign-in", h.SignIn)
+	g.GET("/sign-out", middleware.AuthMiddleware(h.tm), h.SignOut)
 }
 
 func (h *AuthHandler) SignUp(c *gin.Context) {
@@ -69,6 +74,17 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	setCookie(c, "refresh_token", creds.RefreshToken, creds.RefreshExp)
 
 	c.JSON(http.StatusOK, creds.ID)
+}
+
+func (h *AuthHandler) SignOut(c *gin.Context) {
+	ref, _ := c.Cookie("refresh_token")
+
+	h.svc.SignOut(c.Request.Context(), ref)
+
+	setCookie(c, "access_token", "", -1)
+	setCookie(c, "refresh_token", "", -1)
+
+	c.Status(http.StatusOK)
 }
 
 func setCookie(c *gin.Context, name, value string, exp int) {
