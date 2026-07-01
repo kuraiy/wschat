@@ -3,12 +3,14 @@ package middleware
 import (
 	"errors"
 	"net/http"
+	"time"
+	"wschat/internal/token"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func AuthMiddleware(secret string) gin.HandlerFunc {
+func AuthMiddleware(tm *token.TokenManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr, err := c.Cookie("access_token")
 
@@ -18,67 +20,62 @@ func AuthMiddleware(secret string) gin.HandlerFunc {
 			return
 		}
 
-		valid, exp, err := checkToken(tokenStr, secret)
+		token, err := tm.ParseToken(tokenStr)
 
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, err.Error())
-			c.Abort()
-			return
-		}
-
-		if exp {
-			refresh, err := c.Cookie("refresh_token")
-		}
-
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
-			return []byte(secret), nil
-		})
-
-		if err != nil {
-			if errors.Is(err, jwt.ErrTokenExpired) {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error": "token expired",
-				})
-				c.Abort()
+			if !errors.Is(err, jwt.ErrTokenExpired) {
+				sendUnauthorized(c)
 				return
 			}
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid token",
-			})
-			c.Abort()
-			return
-		}
 
-		if !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid token",
-			})
-			c.Abort()
-			return
-		}
+			refreshCookie, err := c.Cookie("refresh_token")
 
-		claims := token.Claims.(jwt.MapClaims)
-		userID := int64(claims["id"].(float64))
-		c.Set("userID", userID)
+			if err != nil {
+				sendUnauthorized(c)
+				return
+			}
+
+			refreshToken, err := tm.TryRefresh(refreshCookie)
+
+			if err != nil || !refreshToken.Valid {
+				sendUnauthorized(c)
+				return
+			}
+			refreshClaims := refreshToken.Claims.(jwt.MapClaims)
+			userID := int64(refreshClaims["id"].(float64))
+
+			token, err := tm.GenerateAccess(userID)
+
+			if err != nil {
+				sendUnauthorized(c)
+				return
+			}
+
+			c.SetCookie(
+				"access_token",
+				token,
+				int((time.Hour * time.Duration(tm.AccessExp)).Seconds()),
+				"/",
+				"",
+				false,
+				true,
+			)
+			c.Set("userID", userID)
+		} else {
+			if !token.Valid {
+				sendUnauthorized(c)
+				return
+			}
+
+			claims := token.Claims.(jwt.MapClaims)
+			userID := int64(claims["id"].(float64))
+			c.Set("userID", userID)
+		}
 		c.Next()
 	}
 }
 
-func checkToken(tokenStr string, secret string) (valid bool, expired bool, err error) {
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
-		return []byte(secret), nil
-	})
-
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return false, true, nil
-		}
-		return false, false, errors.New("invalid token")
-	}
-
-	if !token.Valid {
-		return false, false, errors.New("invalid token")
-	}
-
-	return true, false, nil
+func sendUnauthorized(c *gin.Context) {
+	c.Status(http.StatusUnauthorized)
+	c.Abort()
 }
