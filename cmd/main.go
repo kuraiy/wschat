@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -33,16 +34,30 @@ func main() {
 	}
 
 	defer pool.Close()
+	redisAddr := os.Getenv("REDIS")
+	redisPass := os.Getenv("REDISPASS")
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: redisPass,
+		DB:       0,
+	})
+
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Fatal("Can't connect to redis")
+	}
+
 	accessExp, _ := strconv.Atoi(os.Getenv("ACCESS_EXP"))
 	refreshExp, _ := strconv.Atoi(os.Getenv("REFRESH_EXP"))
 	accessSecret := os.Getenv("ACCESS")
 	refreshSecret := os.Getenv("REFRESH")
 
-	tm := auth_token.NewManager(accessSecret, refreshSecret, accessExp, refreshExp)
+	rdb := repository.NewRedis(redisClient)
 
+	tm := auth_token.NewManager(accessSecret, refreshSecret, accessExp, refreshExp, *rdb)
 	ur := repository.New(pool)
 	us := service.New(ur, tm)
-	uh := handler.NewAuth(us)
+	uh := handler.NewAuth(us, tm)
 	mh := handler.NewMe(us, tm)
 
 	rtr := router.New(uh, mh)
