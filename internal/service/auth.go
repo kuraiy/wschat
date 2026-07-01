@@ -2,27 +2,27 @@ package service
 
 import (
 	"context"
+	"errors"
 	"wschat/internal/domain"
+	"wschat/internal/dto"
+	"wschat/internal/token"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	repo      domain.UserRepository
-	secret    string
-	accessExp int
+	repo domain.UserRepository
+	tm   *token.TokenManager
 }
 
-func New(repo domain.UserRepository, secret string, exp int) *AuthService {
+func New(repo domain.UserRepository, tm *token.TokenManager) *AuthService {
 	return &AuthService{
-		repo:      repo,
-		secret:    secret,
-		accessExp: exp,
+		repo: repo,
+		tm:   tm,
 	}
 }
 
-func (s *AuthService) CreateUser(ctx context.Context, username string, password string) error {
-
+func (s *AuthService) SignUp(ctx context.Context, username string, password string) error {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {
@@ -36,4 +36,49 @@ func (s *AuthService) CreateUser(ctx context.Context, username string, password 
 	}
 
 	return nil
+}
+
+func (s *AuthService) SignIn(ctx context.Context, username string, password string) (dto.LoginOutput, error) {
+	user, err := s.repo.GetUserByUsername(ctx, username)
+
+	if err != nil {
+		return dto.LoginOutput{}, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+
+	if err != nil {
+		return dto.LoginOutput{}, errors.New("Incorrect username or password")
+	}
+
+	accessToken, refreshToken, err := s.GenerateTokens(user.ID)
+
+	if err != nil {
+		return dto.LoginOutput{}, err
+	}
+
+	return dto.LoginOutput{
+		ID:           user.ID,
+		Username:     user.Username,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		AccessExp:    s.tm.AccessExp,
+		RefreshExp:   s.tm.RefreshExp,
+	}, nil
+}
+
+func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
+	accessToken, err := s.tm.GenerateAccess(id)
+
+	if err != nil {
+		return "", "", errors.New("failed to generate token")
+	}
+
+	refreshToken, err := s.tm.GenerateRefresh(id)
+
+	if err != nil {
+		return "", "", errors.New("failed to generate token")
+	}
+
+	return accessToken, refreshToken, nil
 }
