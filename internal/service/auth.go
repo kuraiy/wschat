@@ -48,7 +48,7 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 
 	if err != nil {
-		return dto.LoginOutput{}, errors.New("Incorrect username or password")
+		return dto.LoginOutput{}, errors.New("incorrect username or password")
 	}
 
 	accessToken, refreshToken, err := s.GenerateTokens(user.ID)
