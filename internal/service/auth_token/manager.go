@@ -3,6 +3,9 @@ package auth_token
 import (
 	"errors"
 	"time"
+	"wschat/internal/repository"
+
+	"log"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -12,14 +15,16 @@ type TokenManager struct {
 	RefreshSecret string
 	AccessExp     int
 	RefreshExp    int
+	Redis         *repository.Redis
 }
 
-func NewManager(accSecret, refSecret string, accExp, refExp int) *TokenManager {
+func NewManager(accSecret, refSecret string, accExp, refExp int, rd repository.Redis) *TokenManager {
 	return &TokenManager{
 		AccessSecret:  accSecret,
 		RefreshSecret: refSecret,
 		AccessExp:     accExp,
 		RefreshExp:    refExp,
+		Redis:         &rd,
 	}
 }
 
@@ -51,6 +56,12 @@ func (t *TokenManager) GenerateRefresh(id int64) (string, error) {
 		return "", errors.New("failed to generate token")
 	}
 
+	if done := t.Redis.InsertToken(refreshToken, t.RefreshExp); !done {
+		msg := "refresh token can't be inserted to redis\n"
+		log.Print(msg)
+		return "", errors.New(msg)
+	}
+
 	return refreshToken, nil
 }
 
@@ -67,6 +78,12 @@ func (tm *TokenManager) ParseToken(tokenStr string) (*jwt.Token, error) {
 }
 
 func (tm *TokenManager) TryRefresh(refreshStr string) (*jwt.Token, error) {
+	if exist := tm.Redis.CheckToken(refreshStr); !exist {
+		msg := "outdated refresh token\n"
+		log.Print(msg)
+		return nil, errors.New(msg)
+	}
+
 	refresh, err := jwt.Parse(refreshStr, func(t *jwt.Token) (any, error) {
 		return []byte(tm.RefreshSecret), nil
 	})
