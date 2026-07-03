@@ -5,8 +5,6 @@ import (
 	"time"
 	"wschat/internal/repository"
 
-	"log"
-
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -58,7 +56,6 @@ func (t *TokenManager) GenerateRefresh(id int64) (string, error) {
 
 	if done := t.Redis.InsertToken(refreshToken, t.RefreshExp); !done {
 		msg := "refresh token can't be inserted to redis"
-		log.Print(msg)
 		return "", errors.New(msg)
 	}
 
@@ -80,7 +77,6 @@ func (tm *TokenManager) ParseToken(tokenStr string) (*jwt.Token, error) {
 func (tm *TokenManager) TryRefresh(refreshStr string) (*jwt.Token, error) {
 	if exist := tm.Redis.CheckToken(refreshStr); !exist {
 		msg := "outdated refresh token"
-		log.Print(msg)
 		return nil, errors.New(msg)
 	}
 
