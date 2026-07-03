@@ -81,7 +81,7 @@ func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
 	refreshToken, err := s.tm.GenerateRefresh(id)
 
 	if err != nil {
-		return "", "", errors.New("failed to generate token")
+		return "", "", errors.New("failed to refresh generate token")
 	}
 
 	return accessToken, refreshToken, nil
