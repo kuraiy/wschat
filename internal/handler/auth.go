@@ -5,6 +5,7 @@ import (
 	"time"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
+	"wschat/internal/helpers"
 	"wschat/internal/middleware"
 	"wschat/internal/service/auth_token"
 
@@ -70,8 +71,9 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	}
 
 	c.SetSameSite(http.SameSiteLaxMode)
-	setCookie(c, "access_token", creds.AccessToken, creds.AccessExp)
-	setCookie(c, "refresh_token", creds.RefreshToken, creds.RefreshExp)
+
+	helpers.SetCookie(c, "access_token", creds.AccessToken, creds.AccessExp, time.Minute)
+	helpers.SetCookie(c, "refresh_token", creds.RefreshToken, creds.RefreshExp, time.Hour)
 
 	c.JSON(http.StatusOK, creds.ID)
 }
@@ -81,20 +83,8 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 
 	h.svc.SignOut(c.Request.Context(), ref)
 
-	setCookie(c, "access_token", "", -1)
-	setCookie(c, "refresh_token", "", -1)
+	helpers.SetCookie(c, "access_token", "", -1, time.Minute)
+	helpers.SetCookie(c, "refresh_token", "", -1, time.Hour)
 
 	c.Status(http.StatusOK)
-}
-
-func setCookie(c *gin.Context, name, value string, exp int) {
-	c.SetCookie(
-		name,
-		value,
-		int((time.Hour * time.Duration(exp)).Seconds()),
-		"/",
-		"",
-		false,
-		true,
-	)
 }
