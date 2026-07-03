@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"wschat/internal/helpers"
 	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +24,8 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 		token, err := tm.ParseToken(tokenStr)
 
 		if err != nil {
-			if !errors.Is(err, jwt.ErrTokenExpired) {
+
+			if errors.Is(err, jwt.ErrTokenExpired) {
 				sendUnauthorized(c)
 				return
 			}
@@ -35,15 +37,13 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 				return
 			}
 
-			refreshToken, err := tm.TryRefresh(refreshCookie)
+			refreshExists := tm.CheckRefreshToken(refreshCookie)
 
-			if err != nil || !refreshToken.Valid {
+			if !refreshExists {
 				sendUnauthorized(c)
 				return
 			}
-			refreshClaims := refreshToken.Claims.(jwt.MapClaims)
-			userID := int64(refreshClaims["id"].(float64))
-
+			userID := getClaims(token)
 			token, err := tm.GenerateAccess(userID)
 
 			if err != nil {
@@ -51,15 +51,7 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 				return
 			}
 
-			c.SetCookie(
-				"access_token",
-				token,
-				int((time.Hour * time.Duration(tm.AccessExp)).Seconds()),
-				"/",
-				"",
-				false,
-				true,
-			)
+			helpers.SetCookie(c, "access_token", token, tm.AccessExp, time.Minute)
 			c.Set("userID", userID)
 		} else {
 			if !token.Valid {
@@ -67,8 +59,7 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 				return
 			}
 
-			claims := token.Claims.(jwt.MapClaims)
-			userID := int64(claims["id"].(float64))
+			userID := getClaims(token)
 			c.Set("userID", userID)
 		}
 		c.Next()
@@ -78,4 +69,10 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 func sendUnauthorized(c *gin.Context) {
 	c.Status(http.StatusUnauthorized)
 	c.Abort()
+}
+
+func getClaims(token *jwt.Token) int64 {
+	claims := token.Claims.(jwt.MapClaims)
+
+	return int64(claims["id"].(float64))
 }
