@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
-	"wschat/internal/middleware"
 	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
@@ -23,8 +22,8 @@ func NewUser(s domain.UserService, manager *auth_token.TokenManager) *UserHandle
 }
 
 func (m *UserHandler) UserRoutes(g *gin.RouterGroup) {
-	g.GET("/me", middleware.AuthMiddleware(m.tm), m.GetMe)
-	g.PATCH("/username", middleware.AuthMiddleware(m.tm), m.ChangeUsername)
+	g.GET("/me", m.GetMe)
+	g.PATCH("/username", m.ChangeUsername)
 }
 
 func (m *UserHandler) GetMe(c *gin.Context) {
