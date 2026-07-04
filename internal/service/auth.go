@@ -7,6 +7,8 @@ import (
 	"wschat/internal/dto"
 	auth_token "wschat/internal/service/auth_token"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,7 +44,7 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 	user, err := s.repo.GetUserByUsername(ctx, username)
 
 	if err != nil {
-		return dto.LoginOutput{}, err
+		return dto.LoginOutput{}, checkPgErr(err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -71,6 +73,29 @@ func (s *AuthService) SignOut(ctx context.Context, refresh string) {
 	s.tm.Redis.DeleteToken(refresh)
 }
 
+func (s *AuthService) ChangeUsername(ctx context.Context, id int64, newUsername string) error {
+	err := s.repo.ChangeUsername(ctx, id, newUsername)
+
+	if err != nil {
+		return checkPgErr(err)
+	}
+
+	return nil
+}
+
+func (s *AuthService) GetUser(ctx context.Context, id int64) (dto.GetMeDTO, error) {
+	user, err := s.repo.GetByID(ctx, id)
+
+	if err != nil {
+		return dto.GetMeDTO{}, err
+	}
+
+	return dto.GetMeDTO{
+		ID:       user.ID,
+		Username: user.Username,
+	}, nil
+}
+
 func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
 	accessToken, err := s.tm.GenerateAccess(id)
 
@@ -85,4 +110,20 @@ func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
 	}
 
 	return accessToken, refreshToken, nil
+}
+
+func checkPgErr(err error) error {
+	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return errors.New("username is already taken")
+		}
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("user not found")
+		}
+	}
+
+	return err
 }

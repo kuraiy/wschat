@@ -35,7 +35,7 @@ func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string)
 	res, err := r.queries.GetUser(ctx, username)
 
 	if err != nil {
-		return domain.User{}, nil
+		return domain.User{}, err
 	}
 
 	return domain.User{
@@ -43,4 +43,31 @@ func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string)
 		Username:     res.Username,
 		PasswordHash: res.PasswordHash,
 	}, nil
+}
+
+func (r *AuthRepository) GetByID(ctx context.Context, id int64) (domain.User, error) {
+	res, err := r.queries.GetById(ctx, id)
+
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return domain.User{
+		ID:           res.ID,
+		Username:     res.Username,
+		PasswordHash: res.PasswordHash,
+	}, nil
+}
+
+func (r *AuthRepository) ChangeUsername(ctx context.Context, id int64, username string) error {
+	_, err := r.queries.UpdateUsername(ctx, database.UpdateUsernameParams{
+		ID:       id,
+		Username: username,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
