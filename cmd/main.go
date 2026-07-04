@@ -44,9 +44,9 @@ func main() {
 	ur := repository.New(pool)
 	us := service.New(ur, tm)
 	uh := handler.NewAuth(us, tm)
-	mh := handler.NewMe(us, tm)
+	mh := handler.NewUser(us, tm)
 
-	rtr := router.New(uh, mh)
+	rtr := router.New(uh, mh, tm)
 
 	if err := rtr.Run(os.Getenv("APP_PORT")); err != nil {
 		log.Fatal("Server didn't start")
