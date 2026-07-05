@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
 	"wschat/internal/helpers"
 	"wschat/internal/middleware"
+	"wschat/internal/service"
 	"wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +66,12 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	creds, err := h.svc.SignIn(c.Request.Context(), json.Username, json.Password)
 
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
