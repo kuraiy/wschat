@@ -24,6 +24,7 @@ func NewUser(s domain.UserService, manager *auth_token.TokenManager) *UserHandle
 func (m *UserHandler) UserRoutes(g *gin.RouterGroup) {
 	g.GET("/me", m.GetMe)
 	g.PATCH("/username", m.ChangeUsername)
+	g.PATCH("/password", m.ChangePassword)
 }
 
 func (m *UserHandler) GetMe(c *gin.Context) {
@@ -42,7 +43,6 @@ func (m *UserHandler) GetMe(c *gin.Context) {
 }
 
 func (m *UserHandler) ChangeUsername(c *gin.Context) {
-
 	var json dto.ChangeUsernameDTO
 
 	if err := c.ShouldBindJSON(&json); err != nil {
@@ -54,6 +54,30 @@ func (m *UserHandler) ChangeUsername(c *gin.Context) {
 
 	id := c.MustGet("userID").(int64)
 	err := m.svc.ChangeUsername(c.Request.Context(), id, json.Username)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (m *UserHandler) ChangePassword(c *gin.Context) {
+	var json dto.ChangePasswordDTO
+
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	id := c.MustGet("userID").(int64)
+
+	err := m.svc.ChangePassword(c.Request.Context(), id, json)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
