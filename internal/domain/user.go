@@ -16,6 +16,7 @@ type UserRepository interface {
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetByID(ctx context.Context, id int64) (User, error)
 	ChangeUsername(ctx context.Context, id int64, newUsername string) error
+	ChangePassword(ctx context.Context, id int64, newPass string) error
 }
 
 type UserService interface {
@@ -24,4 +25,5 @@ type UserService interface {
 	SignOut(ctx context.Context, refresh string)
 	ChangeUsername(ctx context.Context, id int64, newUsername string) error
 	GetUser(ctx context.Context, id int64) (dto.GetMeDTO, error)
+	ChangePassword(ctx context.Context, id int64, json dto.ChangePasswordDTO) error
 }
