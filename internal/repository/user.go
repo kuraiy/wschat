@@ -71,3 +71,16 @@ func (r *AuthRepository) ChangeUsername(ctx context.Context, id int64, username 
 
 	return nil
 }
+
+func (r *AuthRepository) ChangePassword(ctx context.Context, id int64, hashedPassword string) error {
+	_, err := r.queries.UpdatePassword(ctx, database.UpdatePasswordParams{
+		ID:           id,
+		PasswordHash: hashedPassword,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
