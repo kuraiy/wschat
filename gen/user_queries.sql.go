@@ -35,15 +35,76 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const getUser = `-- name: GetUser :one
+const getById = `-- name: GetById :one
 SELECT id, username, password_hash FROM users
-WHERE id = $1
+WHERE username = $1
 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
+func (q *Queries) GetById(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getById, id)
 	var i User
 	err := row.Scan(&i.ID, &i.Username, &i.PasswordHash)
+	return i, err
+}
+
+const getUser = `-- name: GetUser :one
+SELECT id, username, password_hash FROM users
+WHERE username = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, username)
+	var i User
+	err := row.Scan(&i.ID, &i.Username, &i.PasswordHash)
+	return i, err
+}
+
+const updatePassword = `-- name: UpdatePassword :one
+UPDATE users
+SET password_hash = $2
+WHERE id = $1
+RETURNING id, username
+`
+
+type UpdatePasswordParams struct {
+	ID           int64
+	PasswordHash string
+}
+
+type UpdatePasswordRow struct {
+	ID       int64
+	Username string
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (UpdatePasswordRow, error) {
+	row := q.db.QueryRow(ctx, updatePassword, arg.ID, arg.PasswordHash)
+	var i UpdatePasswordRow
+	err := row.Scan(&i.ID, &i.Username)
+	return i, err
+}
+
+const updateUsername = `-- name: UpdateUsername :one
+UPDATE users
+SET username = $2
+WHERE id = $1
+RETURNING id, username
+`
+
+type UpdateUsernameParams struct {
+	ID       int64
+	Username string
+}
+
+type UpdateUsernameRow struct {
+	ID       int64
+	Username string
+}
+
+func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) (UpdateUsernameRow, error) {
+	row := q.db.QueryRow(ctx, updateUsername, arg.ID, arg.Username)
+	var i UpdateUsernameRow
+	err := row.Scan(&i.ID, &i.Username)
 	return i, err
 }
