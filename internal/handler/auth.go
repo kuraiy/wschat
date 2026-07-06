@@ -12,6 +12,7 @@ import (
 	"wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type AuthHandler struct {
@@ -45,6 +46,13 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	err := h.svc.SignUp(c.Request.Context(), json.Username, json.Password)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": ErrTaken.Error(),
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
@@ -68,7 +76,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
+				"error": service.ErrInvalidCredentials.Error(),
 			})
 			return
 		}
