@@ -7,8 +7,6 @@ import (
 	"wschat/internal/dto"
 	auth_token "wschat/internal/service/auth_token"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -46,7 +44,7 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 	user, err := s.repo.GetUserByUsername(ctx, username)
 
 	if err != nil {
-		return dto.LoginOutput{}, checkPgErr(err)
+		return dto.LoginOutput{}, ErrInvalidCredentials
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -79,7 +77,7 @@ func (s *AuthService) ChangeUsername(ctx context.Context, id int64, newUsername 
 	err := s.repo.ChangeUsername(ctx, id, newUsername)
 
 	if err != nil {
-		return checkPgErr(err)
+		return err
 	}
 
 	return nil
@@ -140,20 +138,4 @@ func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
 	}
 
 	return accessToken, refreshToken, nil
-}
-
-func checkPgErr(err error) error {
-	if err != nil {
-		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return errors.New("username is already taken")
-		}
-
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New("user not found")
-		}
-	}
-
-	return err
 }
