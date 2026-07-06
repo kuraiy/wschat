@@ -19,4 +19,5 @@ type UserRepository interface {
 type UserService interface {
 	SignUp(ctx context.Context, username string, password string) error
 	SignIn(ctx context.Context, username string, password string) (dto.LoginOutput, error)
+	SignOut(ctx context.Context, refresh string)
 }
