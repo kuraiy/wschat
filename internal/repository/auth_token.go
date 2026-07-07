@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -9,18 +10,16 @@ import (
 
 type Redis struct {
 	rdb *redis.Client
-	ctx context.Context
 }
 
 func NewRedis(rdb *redis.Client) *Redis {
 	return &Redis{
 		rdb: rdb,
-		ctx: context.Background(),
 	}
 }
 
-func (r *Redis) CheckToken(ref string) bool {
-	exist, err := r.rdb.Exists(r.ctx, ref).Result()
+func (r *Redis) CheckToken(ctx context.Context, ref string) bool {
+	exist, err := r.rdb.Exists(ctx, ref).Result()
 	if err != nil {
 		return false
 	}
@@ -32,13 +31,29 @@ func (r *Redis) CheckToken(ref string) bool {
 	return false
 }
 
-func (r *Redis) InsertToken(ref string, ttl int) bool {
-	if err := r.rdb.Set(r.ctx, ref, true, time.Duration(ttl)*time.Hour).Err(); err != nil {
+func (r *Redis) GetToken(ctx context.Context, ref string) (int64, error) {
+	idStr, err := r.rdb.Get(ctx, ref).Result()
+
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (r *Redis) InsertToken(ctx context.Context, ref string, id int64, ttl int) bool {
+	if err := r.rdb.Set(ctx, ref, id, time.Duration(ttl)*time.Hour).Err(); err != nil {
 		return false
 	}
 	return true
 }
 
-func (r *Redis) DeleteToken(ref string) {
-	_ = r.rdb.Del(r.ctx, ref).Err()
+func (r *Redis) DeleteToken(ctx context.Context, ref string) {
+	_ = r.rdb.Del(ctx, ref).Err()
 }
