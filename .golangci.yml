@@ -6,12 +6,7 @@ linters:
     - errcheck
     - govet
     - unused
-
-linters-settings:
-  staticcheck:
-    checks:
-      - "all"
-
-issues:
-  exclude-rules: []
-  exclude-use-default: false
+  settings:
+    staticcheck:
+      checks:
+        - all
