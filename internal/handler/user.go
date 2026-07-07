@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"time"
 	"wschat/internal/domain"
@@ -10,8 +9,6 @@ import (
 	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type UserHandler struct {
@@ -30,10 +27,8 @@ func (m *UserHandler) UserRoutes(g *gin.RouterGroup) {
 	g.GET("/me", m.GetMe)
 	g.PATCH("/username", m.ChangeUsername)
 	g.PATCH("/password", m.ChangePassword)
+	g.DELETE("/delete", m.Delete)
 }
-
-var ErrNotFound = errors.New("user not found")
-var ErrTaken = errors.New("username is already taken")
 
 func (m *UserHandler) GetMe(c *gin.Context) {
 	id := c.MustGet("userID").(int64)
@@ -41,15 +36,7 @@ func (m *UserHandler) GetMe(c *gin.Context) {
 	user, err := m.svc.GetUser(c.Request.Context(), id)
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": ErrNotFound.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		helpers.WriteError(c, err)
 		return
 	}
 
@@ -70,16 +57,7 @@ func (m *UserHandler) ChangeUsername(c *gin.Context) {
 	err := m.svc.ChangeUsername(c.Request.Context(), id, json.Username)
 
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": ErrTaken.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		helpers.WriteError(c, err)
 		return
 	}
 
@@ -101,16 +79,35 @@ func (m *UserHandler) ChangePassword(c *gin.Context) {
 	err := m.svc.ChangePassword(c.Request.Context(), id, json)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		helpers.WriteError(c, err)
 		return
 	}
 
 	refresh, _ := c.Cookie("refresh_token")
 	m.svc.SignOut(c.Request.Context(), refresh)
 
+	invalidateTokens(c)
+	c.Status(http.StatusOK)
+}
+
+func (m *UserHandler) Delete(c *gin.Context) {
+	id := c.MustGet("userID").(int64)
+
+	err := m.svc.DeleteUser(c.Request.Context(), id)
+
+	if err != nil {
+		helpers.WriteError(c, err)
+		return
+	}
+
+	refresh, _ := c.Cookie("refresh_token")
+	m.svc.SignOut(c.Request.Context(), refresh)
+
+	invalidateTokens(c)
+	c.Status(http.StatusOK)
+}
+
+func invalidateTokens(c *gin.Context) {
 	helpers.SetCookie(c, "refresh_token", "", -1, time.Hour)
 	helpers.SetCookie(c, "access_token", "", -1, time.Minute)
-	c.Status(http.StatusOK)
 }
