@@ -28,3 +28,10 @@ RETURNING id, username;
 SELECT id, username, password_hash FROM users
 WHERE id = $1
 LIMIT 1;
+
+-- name: DeleteUser :one
+DELETE FROM users
+WHERE id = $1
+RETURNING id;
+
+

@@ -35,9 +35,22 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const deleteUser = `-- name: DeleteUser :one
+DELETE FROM users
+WHERE id = $1
+RETURNING id
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, deleteUser, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const getById = `-- name: GetById :one
 SELECT id, username, password_hash FROM users
-WHERE username = $1
+WHERE id = $1
 LIMIT 1
 `
 
