@@ -25,7 +25,7 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 
 		if err != nil {
 
-			if errors.Is(err, jwt.ErrTokenExpired) {
+			if !errors.Is(err, jwt.ErrTokenExpired) {
 				sendUnauthorized(c)
 				return
 			}
@@ -37,14 +37,13 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 				return
 			}
 
-			refreshExists := tm.CheckRefreshToken(refreshCookie)
+			idFromRedis, err := tm.GetRefreshToken(c.Request.Context(), refreshCookie)
 
-			if !refreshExists {
+			if err != nil {
 				sendUnauthorized(c)
 				return
 			}
-			userID := getClaims(token)
-			token, err := tm.GenerateAccess(userID)
+			token, err := tm.GenerateAccess(idFromRedis)
 
 			if err != nil {
 				sendUnauthorized(c)
@@ -52,7 +51,7 @@ func AuthMiddleware(tm *auth_token.TokenManager) gin.HandlerFunc {
 			}
 
 			helpers.SetCookie(c, "access_token", token, tm.AccessExp, time.Minute)
-			c.Set("userID", userID)
+			c.Set("userID", idFromRedis)
 		} else {
 			if !token.Valid {
 				sendUnauthorized(c)

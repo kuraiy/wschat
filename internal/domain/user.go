@@ -2,7 +2,14 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"wschat/internal/dto"
+)
+
+var (
+	ErrUserNotFound       = errors.New("user not found")
+	ErrUsernameTaken      = errors.New("username already taken")
+	ErrInvalidCredentials = errors.New("invalid username or password")
 )
 
 type User struct {
@@ -17,6 +24,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int64) (User, error)
 	ChangeUsername(ctx context.Context, id int64, newUsername string) error
 	ChangePassword(ctx context.Context, id int64, newPass string) error
+	DeleteUser(ctx context.Context, id int64) error
 }
 
 type UserService interface {
@@ -26,4 +34,5 @@ type UserService interface {
 	ChangeUsername(ctx context.Context, id int64, newUsername string) error
 	GetUser(ctx context.Context, id int64) (dto.GetMeDTO, error)
 	ChangePassword(ctx context.Context, id int64, json dto.ChangePasswordDTO) error
+	DeleteUser(ctx context.Context, id int64) error
 }

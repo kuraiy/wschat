@@ -2,11 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	database "wschat/gen"
 	"wschat/internal/domain"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const pgUniqueViolation = "23505"
 
 type AuthRepository struct {
 	queries *database.Queries
@@ -25,7 +31,11 @@ func (r *AuthRepository) CreateUser(ctx context.Context, username string, passwo
 	})
 
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
+			return domain.ErrUsernameTaken
+		}
+		return fmt.Errorf("create user: %w", err)
 	}
 
 	return nil
@@ -35,7 +45,7 @@ func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string)
 	res, err := r.queries.GetUser(ctx, username)
 
 	if err != nil {
-		return domain.User{}, err
+		return domain.User{}, fmt.Errorf("get user by username %w", err)
 	}
 
 	return domain.User{
@@ -49,7 +59,10 @@ func (r *AuthRepository) GetByID(ctx context.Context, id int64) (domain.User, er
 	res, err := r.queries.GetById(ctx, id)
 
 	if err != nil {
-		return domain.User{}, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, domain.ErrUserNotFound
+		}
+		return domain.User{}, fmt.Errorf("get user by id: %w", err)
 	}
 
 	return domain.User{
@@ -66,7 +79,24 @@ func (r *AuthRepository) ChangeUsername(ctx context.Context, id int64, username 
 	})
 
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
+			return domain.ErrUsernameTaken
+		}
+		return fmt.Errorf("update username: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AuthRepository) DeleteUser(ctx context.Context, id int64) error {
+	_, err := r.queries.DeleteUser(ctx, id)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrUserNotFound
+		}
+		return fmt.Errorf("delete user: %w", err)
 	}
 
 	return nil
@@ -79,7 +109,7 @@ func (r *AuthRepository) ChangePassword(ctx context.Context, id int64, hashedPas
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("change password: %w", err)
 	}
 
 	return nil

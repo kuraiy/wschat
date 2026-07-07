@@ -2,15 +2,13 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"wschat/internal/domain"
 	"wschat/internal/dto"
 	auth_token "wschat/internal/service/auth_token"
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-var ErrInvalidCredentials = errors.New("incorrect username or password")
 
 type AuthService struct {
 	repo domain.UserRepository
@@ -44,16 +42,16 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 	user, err := s.repo.GetUserByUsername(ctx, username)
 
 	if err != nil {
-		return dto.LoginOutput{}, ErrInvalidCredentials
+		return dto.LoginOutput{}, domain.ErrInvalidCredentials
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 
 	if err != nil {
-		return dto.LoginOutput{}, ErrInvalidCredentials
+		return dto.LoginOutput{}, domain.ErrInvalidCredentials
 	}
 
-	accessToken, refreshToken, err := s.GenerateTokens(user.ID)
+	accessToken, refreshToken, err := s.GenerateTokens(ctx, user.ID)
 
 	if err != nil {
 		return dto.LoginOutput{}, err
@@ -70,7 +68,7 @@ func (s *AuthService) SignIn(ctx context.Context, username string, password stri
 }
 
 func (s *AuthService) SignOut(ctx context.Context, refresh string) {
-	s.tm.Redis.DeleteToken(refresh)
+	s.tm.Redis.DeleteToken(ctx, refresh)
 }
 
 func (s *AuthService) ChangeUsername(ctx context.Context, id int64, newUsername string) error {
@@ -93,7 +91,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, id int64, passJson dto
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passJson.OldPassword))
 
 	if err != nil {
-		return ErrInvalidCredentials
+		return domain.ErrInvalidCredentials
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passJson.NewPassword), bcrypt.DefaultCost)
@@ -124,17 +122,21 @@ func (s *AuthService) GetUser(ctx context.Context, id int64) (dto.GetMeDTO, erro
 	}, nil
 }
 
-func (s *AuthService) GenerateTokens(id int64) (string, string, error) {
+func (s *AuthService) DeleteUser(ctx context.Context, id int64) error {
+	return s.repo.DeleteUser(ctx, id)
+}
+
+func (s *AuthService) GenerateTokens(ctx context.Context, id int64) (string, string, error) {
 	accessToken, err := s.tm.GenerateAccess(id)
 
 	if err != nil {
-		return "", "", errors.New("failed to generate token")
+		return "", "", fmt.Errorf("generate access token %w", err)
 	}
 
-	refreshToken, err := s.tm.GenerateRefresh(id)
+	refreshToken, err := s.tm.GenerateRefresh(ctx, id)
 
 	if err != nil {
-		return "", "", errors.New("failed to refresh generate token")
+		return "", "", fmt.Errorf("generate refresh token %w", err)
 	}
 
 	return accessToken, refreshToken, nil
