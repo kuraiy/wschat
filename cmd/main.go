@@ -40,7 +40,7 @@ func main() {
 
 	rdb := repository.NewRedis(redisClient)
 
-	tm := configureTokenManager(*rdb)
+	tm := configureTokenManager(rdb)
 	ur := repository.New(pool)
 	us := service.New(ur, tm)
 	uh := handler.NewAuth(us, tm)
@@ -78,7 +78,7 @@ func connectToRedis() *redis.Client {
 	})
 }
 
-func configureTokenManager(repo repository.Redis) *auth_token.TokenManager {
+func configureTokenManager(repo *repository.Redis) *auth_token.TokenManager {
 	accessExp, _ := strconv.Atoi(os.Getenv("ACCESS_EXP"))
 	refreshExp, _ := strconv.Atoi(os.Getenv("REFRESH_EXP"))
 	accessSecret := os.Getenv("ACCESS")
