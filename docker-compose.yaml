@@ -1,13 +1,54 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: wschat-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${PGPORT}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:latest
-    container_name: redis
+    container_name: wschat-redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --requirepass hellothere123
+    command: redis-server --requirepass ${REDISPASS}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDISPASS} ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: wschat-app
+    restart: always
+    env_file: .env
+    environment:
+      PGHOST: postgres        
+      PGPORT: 5432           
+      REDIS: redis:6379
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
+  pg-data:
   redis-data:
