@@ -1,6 +1,7 @@
 package auth_token
 
 import (
+	"context"
 	"errors"
 	"time"
 	"wschat/internal/repository"
@@ -17,13 +18,13 @@ type TokenManager struct {
 	Redis         *repository.Redis
 }
 
-func NewManager(accSecret, refSecret string, accExp, refExp int, rd repository.Redis) *TokenManager {
+func NewManager(accSecret, refSecret string, accExp, refExp int, rd *repository.Redis) *TokenManager {
 	return &TokenManager{
 		AccessSecret:  accSecret,
 		RefreshSecret: refSecret,
 		AccessExp:     accExp,
 		RefreshExp:    refExp,
-		Redis:         &rd,
+		Redis:         rd,
 	}
 }
 
@@ -42,11 +43,11 @@ func (t *TokenManager) GenerateAccess(id int64) (string, error) {
 	return accessToken, nil
 }
 
-func (t *TokenManager) GenerateRefresh(id int64) (string, error) {
+func (t *TokenManager) GenerateRefresh(ctx context.Context, id int64) (string, error) {
 
 	refreshToken := uuid.New().String()
 
-	if done := t.Redis.InsertToken(refreshToken, t.RefreshExp); !done {
+	if done := t.Redis.InsertToken(ctx, refreshToken, id, t.RefreshExp); !done {
 		msg := "refresh token can't be inserted to redis"
 		return "", errors.New(msg)
 	}
@@ -55,21 +56,34 @@ func (t *TokenManager) GenerateRefresh(id int64) (string, error) {
 }
 
 func (tm *TokenManager) ParseToken(tokenStr string) (*jwt.Token, error) {
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
-		return []byte(tm.AccessSecret), nil
-	})
+	token, err := jwt.Parse(tokenStr,
+		func(t *jwt.Token) (any, error) {
+			return []byte(tm.AccessSecret), nil
+		},
+		jwt.WithValidMethods([]string{"HS256"}),
+	)
 
 	if err != nil {
-		return nil, err
+		return token, err
 	}
 
 	return token, nil
 }
 
-func (tm *TokenManager) CheckRefreshToken(refreshStr string) bool {
-	if exist := tm.Redis.CheckToken(refreshStr); !exist {
+func (tm *TokenManager) CheckRefreshToken(ctx context.Context, refreshStr string) bool {
+	if exist := tm.Redis.CheckToken(ctx, refreshStr); !exist {
 		return false
 	}
 
 	return true
+}
+
+func (tm *TokenManager) GetRefreshToken(ctx context.Context, refreshStr string) (int64, error) {
+	id, err := tm.Redis.GetToken(ctx, refreshStr)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
