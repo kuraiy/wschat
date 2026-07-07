@@ -33,6 +33,3 @@ Thumbs.db
 
 # Логи
 *.log
-
-Makefile
-.golangci.yml
