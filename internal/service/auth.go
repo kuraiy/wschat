@@ -81,20 +81,20 @@ func (s *AuthService) ChangeUsername(ctx context.Context, id int64, newUsername 
 	return nil
 }
 
-func (s *AuthService) ChangePassword(ctx context.Context, id int64, passJson dto.ChangePasswordDTO) error {
+func (s *AuthService) ChangePassword(ctx context.Context, id int64, passJSON dto.ChangePasswordDTO) error {
 	user, err := s.repo.GetByID(ctx, id)
 
 	if err != nil {
 		return err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passJson.OldPassword))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passJSON.OldPassword))
 
 	if err != nil {
 		return domain.ErrInvalidCredentials
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passJson.NewPassword), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passJSON.NewPassword), bcrypt.DefaultCost)
 
 	if err != nil {
 		return err

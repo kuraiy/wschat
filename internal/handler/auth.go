@@ -7,7 +7,7 @@ import (
 	"wschat/internal/dto"
 	"wschat/internal/helpers"
 	"wschat/internal/middleware"
-	"wschat/internal/service/auth_token"
+	auth_token "wschat/internal/service/auth_token"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,4 +1,4 @@
-package auth_token
+package authtoken
 
 import (
 	"context"
@@ -28,13 +28,13 @@ func NewManager(accSecret, refSecret string, accExp, refExp int, rd *repository.
 	}
 }
 
-func (t *TokenManager) GenerateAccess(id int64) (string, error) {
+func (tm *TokenManager) GenerateAccess(id int64) (string, error) {
 	generateAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  id,
-		"exp": time.Now().Add(time.Minute * time.Duration(t.AccessExp)).Unix(),
+		"exp": time.Now().Add(time.Minute * time.Duration(tm.AccessExp)).Unix(),
 	})
 
-	accessToken, err := generateAccessToken.SignedString([]byte(t.AccessSecret))
+	accessToken, err := generateAccessToken.SignedString([]byte(tm.AccessSecret))
 
 	if err != nil {
 		return "", errors.New("failed to generate token")
@@ -43,11 +43,11 @@ func (t *TokenManager) GenerateAccess(id int64) (string, error) {
 	return accessToken, nil
 }
 
-func (t *TokenManager) GenerateRefresh(ctx context.Context, id int64) (string, error) {
+func (tm *TokenManager) GenerateRefresh(ctx context.Context, id int64) (string, error) {
 
 	refreshToken := uuid.New().String()
 
-	if done := t.Redis.InsertToken(ctx, refreshToken, id, t.RefreshExp); !done {
+	if done := tm.Redis.InsertToken(ctx, refreshToken, id, tm.RefreshExp); !done {
 		msg := "refresh token can't be inserted to redis"
 		return "", errors.New(msg)
 	}
@@ -68,14 +68,6 @@ func (tm *TokenManager) ParseToken(tokenStr string) (*jwt.Token, error) {
 	}
 
 	return token, nil
-}
-
-func (tm *TokenManager) CheckRefreshToken(ctx context.Context, refreshStr string) bool {
-	if exist := tm.Redis.CheckToken(ctx, refreshStr); !exist {
-		return false
-	}
-
-	return true
 }
 
 func (tm *TokenManager) GetRefreshToken(ctx context.Context, refreshStr string) (int64, error) {
