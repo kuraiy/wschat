@@ -4,6 +4,34 @@
 
 package database
 
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type Chat struct {
+	ID        int64
+	Type      string
+	Name      pgtype.Text
+	CreatedAt pgtype.Timestamp
+	DeletedAt pgtype.Timestamp
+}
+
+type ChatMember struct {
+	ID     int64
+	ChatID int64
+	UserID int64
+}
+
+type Message struct {
+	ID        int64
+	ChatID    int64
+	SenderID  int64
+	Content   string
+	CreatedAt pgtype.Timestamp
+	EditedAt  pgtype.Timestamp
+	DeletedAt pgtype.Timestamp
+}
+
 type User struct {
 	ID           int64
 	Username     string
